@@ -30,7 +30,7 @@ class Region {
 
 
 void setup() {
-  size(1600, 1400, P2D);
+  size(1000, 800, P2D);
 
   data = loadTable("data/pobreza_multidimensional.csv", "header");
 
@@ -143,7 +143,9 @@ void mouseClicked() {
   for (Region r : regions) {
     if (r.focus) {
       // TODO: Open TREEMAP here
-      treemap();
+      stroke(255);
+      rectMode(CENTER);
+      rect(320,180,100,50);
       print(r.name);
     }
   }
