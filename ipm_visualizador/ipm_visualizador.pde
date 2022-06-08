@@ -129,14 +129,23 @@ void setup() {
 
 void radioButton(int a) {
   println("a radio Button event: "+a);
-  switch(key) {
-    case('1'):dimension="Educación"; break;
-    case('2'): dimension="Salud"; break;
-    case('3'): dimension="Trabajo"; break;
-    case('4'): dimension="Protección Social"; break;
-    case('5'): dimension="Vivienda y Uso de Internet"; break;
+  switch(a) {
+    case(1): dimension="Educación"; break;
+    case(2): dimension="Salud"; break;
+    case(3): dimension="Trabajo"; break;
+    case(4): dimension="Protección Social"; break;
+    case(5): dimension="Vivienda y Uso de Internet"; break;
   }
-  shouldScale = true;
+  
+  regions = Arrays.asList(
+    new Region("Chorotega", "data/regions/chorotega.svg", 50, 20)
+    , new Region("Huetar Norte", "data/regions/huetar_norte.svg", 180, 36)
+    , new Region("Huetar Atlántica", "data/regions/huetar_atlantica.svg", 310, 95)
+    , new Region("Central", "data/regions/central.svg", 215, 145)
+    , new Region("Pacífico Central", "data/regions/pacifico_central.svg", 133, 150)
+    , new Region("Brunca", "data/regions/brunca.svg", 322, 250)
+    );
+   println(dimension);
   for (Region r : regions) {
     map(year, dimension, r);
   }
@@ -179,11 +188,11 @@ void map(int year, String dimension, Region region) {
   float r = map(dimTotal, 0, max, 0, 255);
   float g = map(dimTotal, 0, max, 0, 127);
 
-  if (shouldScale) {
-    region.shape.scale(m);
-    region.R = int(r);
-    region.G = int(g);
-  }
+ 
+  region.shape.scale(m);
+  region.R = int(r);
+  region.G = int(g);
+  
 }
 
 // Finds the max value for a certain year and dimension
