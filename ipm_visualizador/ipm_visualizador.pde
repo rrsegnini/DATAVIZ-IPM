@@ -2,18 +2,36 @@ import picking.*;
 import java.util.*;
 import geomerative.*;
 import java.util.Arrays;
+import controlP5.*;
+
+ControlP5 cp5;
+
+RadioButton r;
 
 Region ch, hn, ha, ce, pc, br; // Declare a variable of type PImage
 PGraphics map;
-int mapX = 200;
+int mapX = 350;
 int mapY = 150;
 List<Region> regions = new ArrayList<Region>();
 List<Indicator> indicators = new ArrayList<Indicator>();
 PShape square;
 Table data;
 
-float randomHue = random(0, 1); //color matching... the key to everything!
-float totalValue = 0; //the total values of all elements together, just to write % on square.
+float randomHue = random(0, 1);
+
+int tX, tY = 0;
+
+
+int blockW = 300;
+int  blockH = 300;
+
+PFont decimal;
+
+int year = 2021;
+String dimension = "Salud";
+
+boolean shouldScale = true;
+
 
 class Region {
   RShape shape;
@@ -32,20 +50,26 @@ class Region {
 }
 
 class Indicator {
+  String name;
   PGraphics treemap;
-  int x, y;
+  int x, y, cont;
+  int[] numbers = {0, 0, 0, 0};
+  String[] indicators = {"", "", "", ""};
+  
 
-  Indicator(PGraphics treemap, int x, int y) {
+  Indicator(PGraphics treemap, int x, int y, String name) {
     this.treemap = treemap;
     this.x = x;
     this.y = y;
+    this.name = name;
   }
 }
 
 
 void setup() {
-  size(1000, 800, P2D);
- 
+  size(1300, 1000, P2D);
+  
+  decimal = createFont("Decimal-Semibold.otf",13);
   
   data = loadTable("data/pobreza_multidimensional.csv", "header");
 
@@ -72,19 +96,62 @@ void setup() {
 
   // Map the first dimension
   for (Region r : regions) {
-    map(2021, "Educación", r);
+    map(year, dimension, r);
   }
+  
+  cp5 = new ControlP5(this);
+  r = cp5.addRadioButton("radioButton")
+         .setPosition(400,650)
+         .setSize(40,20)
+         .setColorForeground(color(240))
+         .setColorActive(color(255))
+         .setColorLabel(color(0))
+         .setItemsPerRow(5)
+         .setSpacingColumn(50)
+         .addItem("Educación",1)
+         .addItem("Salud",2)
+         .addItem("Trabajo",3)
+         .addItem("Protección Social",4)
+         .addItem("Vivienda y Uso de Internet",5)
+         ;
+     
+     for(Toggle t:r.getItems()) {
+       t.getCaptionLabel().setColorBackground(color(255,200));
+       t.getCaptionLabel().setPadding(7,3);
+       t.getCaptionLabel().setWidth(45);
+       t.getCaptionLabel().setHeight(13);
+     }
 
 
   
 }
 
+
+void radioButton(int a) {
+  println("a radio Button event: "+a);
+  switch(key) {
+    case('1'):dimension="Educación"; break;
+    case('2'): dimension="Salud"; break;
+    case('3'): dimension="Trabajo"; break;
+    case('4'): dimension="Protección Social"; break;
+    case('5'): dimension="Vivienda y Uso de Internet"; break;
+  }
+  shouldScale = true;
+  for (Region r : regions) {
+    map(year, dimension, r);
+  }
+}
+
 void draw() {
-  //background(255);
+  background(255);
 
   drawMap();
 
   for (Indicator t : indicators) {
+    //map.beginDraw();
+    //t.treemap.fill(0);
+    //t.treemap.text(t.name, blockW, blockH);
+    //map.endDraw();
     image(t.treemap, t.x, t.y);
   }
   
@@ -111,10 +178,12 @@ void map(int year, String dimension, Region region) {
   // Map color
   float r = map(dimTotal, 0, max, 0, 255);
   float g = map(dimTotal, 0, max, 0, 127);
-  println(dimTotal);
-  region.shape.scale(m);
-  region.R = int(r);
-  region.G = int(g);
+
+  if (shouldScale) {
+    region.shape.scale(m);
+    region.R = int(r);
+    region.G = int(g);
+  }
 }
 
 // Finds the max value for a certain year and dimension
@@ -166,10 +235,21 @@ void mouseClicked() {
   
   for (Region r : regions) {
     if (r.focus) {
-      drawTreemap(2019, "Educación", r);
+      boolean exists = false;
+      for (int i = 0; i < indicators.size(); i++) {
+        // If it already exists, we remove it
+        if (indicators.get(i).name.equals(r.name)) {
+          exists = true;
+          indicators.remove(i);
+          break;
+        }
+      }
+      
+      if (!exists) {
+        drawTreemap(year, dimension, r);
+      } 
       
       
-      print(r.name);
     }
   }
 }
@@ -178,64 +258,55 @@ void mouseClicked() {
 void drawTreemap(int year, String dimension, Region region) {
   PGraphics t;
   t = createGraphics(300, 300);
-  indicators.add(new Indicator(t, region.x, region.y));
+  Indicator indi = new Indicator(t, tX, tY, region.name);
+  
+  
+  if (tY <= 500 ) {
+    tY += 300;
+  } else {
+    tY = 0;
+    tX = 1000;
+  }
   
   randomHue = random(0, 1);
 
-  int[] numbers = {0, 0, 0, 0}; 
+   
   int cont = 0;
   for (TableRow row : data.rows()) {
     if (year == row.getInt("Año") && dimension.equals(row.getString("Dimensión"))) {
       for (int i = 0; i < row.getColumnCount(); i++) {
 
         if (region.name.equals(row.getColumnTitle(i))) {
-          numbers[cont] = row.getInt(region.name);
+          indi.numbers[cont] = row.getInt(region.name);
+          indi.indicators[cont] = row.getString("Indicador");
           cont++;
         }
       }
     }
   }
-  
-  println(numbers);
 
-
-  int blockW = 200;
-  int  blockH = 200; 
-  int  refX = 0;
-  int  refY = 0;
-
-  makeBlock(t, 0, 0, blockW, blockH, numbers);
+  indicators.add(indi);
+  makeBlock(indi, 0, 0, blockW, blockH, indi.numbers);
 }
 
-void drawRect(PGraphics t, int x1, int y1, int w1, int h1, int value) {
-  t.imageMode(CENTER);
-  t.beginDraw();
-  t.colorMode(HSB, 1.0);
-  t.stroke(1);
+void drawRect(Indicator t, int x1, int y1, int w1, int h1, int value) {
+  t.treemap.imageMode(CENTER);
+  t.treemap.beginDraw();
+  t.treemap.colorMode(HSB, 1.0);
+  t.treemap.stroke(1);
   float hStart = randomHue - 0.1;
   float hEnd = randomHue + 0.1;
   float h = random(hStart, hEnd);
   float s = random(0.07, 0.35);
   float b = random(0.7, 0.95);
-  t.fill(h, s, b);
-  t.rect(x1, y1, w1, h1); //we draw a rectangle    
-  t.fill(1);
-  //  text(str(value), x1+6, y1+20);  (we don't care about the actual value now that we have the pcnt...)
-  String myPcntStr ;
-  int myPcnt = int(round ((value / totalValue) *100)) ;
-
-  float myPcntDecimal = int(round ((value / totalValue) *1000)) ;
-  myPcntDecimal = myPcntDecimal/10;
-  //myPcnt = floor (myPcnt);
-
-  if (myPcntDecimal > 10) { //bigger than 10%, we round it up.
-    myPcntStr = str(myPcnt) + "%";
-  } else {
-    myPcntStr = str (myPcntDecimal) + "%";
-  }
-  t.text(myPcntStr, x1+(w1/2)-10, y1+(h1/2)+5);
-  t.endDraw();
-  //image(t, 0, 0);
+  t.treemap.fill(h, s, b);
+  t.treemap.rect(x1, y1, w1, h1); //we draw a rectangle    
+  t.treemap.fill(1);
+  
+  t.treemap.textFont(decimal);
+  t.treemap.text(t.indicators[t.cont] + " (" + str(value) + ")", x1+2, y1+1,w1-w1/8,h1-h1/8);
+  t.cont = t.cont + 1;
+  t.treemap.endDraw();
 }
 
 int getPerfectSplitNumber(int[] numbers, int blockW, int blockH) {
@@ -267,14 +338,14 @@ int getPerfectSplitNumber(int[] numbers, int blockW, int blockH) {
     diff = 1- ratioWH;
   }
 
-  if ((diff > 0.5) && (numbers.length >= 3)) { //this is a bit elongated (bigger than 2:1 ratio)
-    return 2; //TEMPORARY !!!!
-  } else { //it's a quite good ratio! we don't touch it OR, it's the last one, sorry, no choice.   
+  if ((diff > 0.5) && (numbers.length >= 3)) {
+    return 2;
+  } else {
     return 1;
   }
 }
 
-void makeBlock(PGraphics t, int refX, int refY, int blockW, int blockH, int[] numbers) {
+void makeBlock(Indicator t, int refX, int refY, int blockW, int blockH, int[] numbers) {
   numbers = reverse(sort(numbers));
 
   int nbItemsInABlock= getPerfectSplitNumber(numbers, blockW, blockH);
@@ -320,7 +391,7 @@ void makeBlock(PGraphics t, int refX, int refY, int blockW, int blockH, int[] nu
     widthB = blockW;
   }
 
-  if (numbersA.length >= 2) {//this mean there is still stuff in this arary...
+  if (numbersA.length >= 2) {
     makeBlock(t, xA, yA, widthA, heightA, numbersA);
   } else {
     drawRect(t, xA, yA, widthA, heightA, valueA);
@@ -328,7 +399,7 @@ void makeBlock(PGraphics t, int refX, int refY, int blockW, int blockH, int[] nu
 
 
 
-  if (numbersB.length >= 2) {//this mean there is still stuff in this arary...
+  if (numbersB.length >= 2) {
     makeBlock(t, xB, yB, widthB, heightB, numbersB);
   } else {
     drawRect(t, xB, yB, widthB, heightB, valueB);
