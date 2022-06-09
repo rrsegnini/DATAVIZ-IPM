@@ -3,10 +3,11 @@ import java.util.*;
 import geomerative.*;
 import java.util.Arrays;
 import controlP5.*;
+import javafx.util.Pair;
 
 ControlP5 cp5;
 
-RadioButton r;
+RadioButton r, r2;
 
 Region ch, hn, ha, ce, pc, br; // Declare a variable of type PImage
 PGraphics map;
@@ -14,21 +15,24 @@ int mapX = 350;
 int mapY = 150;
 List<Region> regions = new ArrayList<Region>();
 List<Indicator> indicators = new ArrayList<Indicator>();
+Map<String, Pair<Integer, Integer>> treemapPositions = new HashMap<String, Pair<Integer, Integer>>();
+
 PShape square;
 Table data;
 
 float randomHue = random(0, 1);
 
-int tX, tY = 0;
+int tX = 10;
+int tY = 10;
 
 
 int blockW = 300;
 int  blockH = 300;
 
-PFont decimal;
+PFont decimal, decimalBig;
 
-int year = 2021;
-String dimension = "Salud";
+int year = 2019;
+String dimension = "Educación";
 
 boolean shouldScale = true;
 
@@ -55,6 +59,7 @@ class Indicator {
   int x, y, cont;
   int[] numbers = {0, 0, 0, 0};
   String[] indicators = {"", "", "", ""};
+  int[] colors = {#0054a6, #ed145b, #ffb000, #7cc576};
   
 
   Indicator(PGraphics treemap, int x, int y, String name) {
@@ -70,8 +75,16 @@ void setup() {
   size(1300, 1000, P2D);
   
   decimal = createFont("Decimal-Semibold.otf",13);
+  decimalBig = createFont("Decimal-Semibold.otf",25);
   
   data = loadTable("data/pobreza_multidimensional.csv", "header");
+  
+  treemapPositions.put("Chorotega", new Pair(10, 10));
+  treemapPositions.put("Huetar Norte", new Pair(10, 330));
+  treemapPositions.put("Huetar Atlántica", new Pair(10, 660));
+  treemapPositions.put("Central", new Pair(1000, 10));
+  treemapPositions.put("Pacífico Central", new Pair(1000, 330));
+  treemapPositions.put("Brunca", new Pair(1000, 660));
 
 
 
@@ -79,14 +92,7 @@ void setup() {
   RG.ignoreStyles(true);
   RG.setPolygonizer(RG.ADAPTATIVE);
 
-  regions = Arrays.asList(
-    new Region("Chorotega", "data/regions/chorotega.svg", 50, 20)
-    , new Region("Huetar Norte", "data/regions/huetar_norte.svg", 180, 36)
-    , new Region("Huetar Atlántica", "data/regions/huetar_atlantica.svg", 310, 95)
-    , new Region("Central", "data/regions/central.svg", 215, 145)
-    , new Region("Pacífico Central", "data/regions/pacifico_central.svg", 133, 150)
-    , new Region("Brunca", "data/regions/brunca.svg", 322, 250)
-    );
+  loadRegions();
     
   map = createGraphics(600, 450);
   
@@ -100,14 +106,15 @@ void setup() {
   }
   
   cp5 = new ControlP5(this);
-  r = cp5.addRadioButton("radioButton")
-         .setPosition(400,650)
+  r = cp5.addRadioButton("dimensionRadio")
+         .setPosition(350,650)
          .setSize(40,20)
          .setColorForeground(color(240))
-         .setColorActive(color(255))
+         .setColorBackground(color(#3C55D7))
+         .setColorActive(color(100))
          .setColorLabel(color(0))
-         .setItemsPerRow(5)
-         .setSpacingColumn(50)
+         .setItemsPerRow(3)
+         .setSpacingColumn(200)
          .addItem("Educación",1)
          .addItem("Salud",2)
          .addItem("Trabajo",3)
@@ -117,38 +124,35 @@ void setup() {
      
      for(Toggle t:r.getItems()) {
        t.getCaptionLabel().setColorBackground(color(255,200));
+       t.getCaptionLabel().setFont(decimal);
+       t.getCaptionLabel().setPadding(7,3);
+       t.getCaptionLabel().setWidth(45);
+       t.getCaptionLabel().setHeight(13);
+     }
+   
+  r2 = cp5.addRadioButton("yearRadio")
+         .setPosition(525,720)
+         .setSize(40,20)
+         .setColorForeground(color(240))
+         .setColorBackground(color(#3C55D7))
+         .setColorActive(color(100))
+         .setColorLabel(color(0))
+         .setItemsPerRow(5)
+         .setSpacingColumn(50)
+         .addItem("2019",2019)
+         .addItem("2020",2020)
+         .addItem("2021",2021)
+         ;
+     
+     for(Toggle t:r2.getItems()) {
+       t.getCaptionLabel().setColorBackground(color(255,200));
+       t.getCaptionLabel().setFont(decimal);
        t.getCaptionLabel().setPadding(7,3);
        t.getCaptionLabel().setWidth(45);
        t.getCaptionLabel().setHeight(13);
      }
 
-
   
-}
-
-
-void radioButton(int a) {
-  println("a radio Button event: "+a);
-  switch(a) {
-    case(1): dimension="Educación"; break;
-    case(2): dimension="Salud"; break;
-    case(3): dimension="Trabajo"; break;
-    case(4): dimension="Protección Social"; break;
-    case(5): dimension="Vivienda y Uso de Internet"; break;
-  }
-  
-  regions = Arrays.asList(
-    new Region("Chorotega", "data/regions/chorotega.svg", 50, 20)
-    , new Region("Huetar Norte", "data/regions/huetar_norte.svg", 180, 36)
-    , new Region("Huetar Atlántica", "data/regions/huetar_atlantica.svg", 310, 95)
-    , new Region("Central", "data/regions/central.svg", 215, 145)
-    , new Region("Pacífico Central", "data/regions/pacifico_central.svg", 133, 150)
-    , new Region("Brunca", "data/regions/brunca.svg", 322, 250)
-    );
-   println(dimension);
-  for (Region r : regions) {
-    map(year, dimension, r);
-  }
 }
 
 void draw() {
@@ -157,15 +161,65 @@ void draw() {
   drawMap();
 
   for (Indicator t : indicators) {
-    //map.beginDraw();
-    //t.treemap.fill(0);
-    //t.treemap.text(t.name, blockW, blockH);
-    //map.endDraw();
-    image(t.treemap, t.x, t.y);
+    image(t.treemap, treemapPositions.get(t.name).getKey(), treemapPositions.get(t.name).getValue());
   }
   
   
+  textFont(decimalBig);
+  textAlign(CENTER);
+  fill(0);
+  text("Hogares pobres con privación en " + dimension +" según el Índice de Pobreza Multidimensional (" + year + ")", 400, 40, 500, 200);
+  
 }
+
+void loadRegions() {
+  regions = Arrays.asList(
+      new Region("Chorotega", "data/regions/chorotega.svg", 50, 70)
+      , new Region("Huetar Norte", "data/regions/huetar_norte.svg", 180, 36)
+      , new Region("Huetar Atlántica", "data/regions/huetar_atlantica.svg", 310, 95)
+      , new Region("Central", "data/regions/central.svg", 150, 145)
+      , new Region("Pacífico Central", "data/regions/pacifico_central.svg", 140, 200)
+      , new Region("Brunca", "data/regions/brunca.svg", 322, 300)
+      );
+}
+
+
+
+void dimensionRadio(int a) {
+  switch(a) {
+    case(1): dimension="Educación"; break;
+    case(2): dimension="Salud"; break;
+    case(3): dimension="Trabajo"; break;
+    case(4): dimension="Protección Social"; break;
+    case(5): dimension="Vivienda y Uso de Internet"; break;
+  }
+  
+  redrawMaps();
+}
+
+void yearRadio(int a) {
+  year = a;
+  redrawMaps();
+
+}
+
+void redrawMaps() {
+  loadRegions();
+  
+  for (Region r : regions) {
+    map(year, dimension, r);
+
+    for (int i = 0; i < indicators.size(); i++) {
+      // If it already exists, we remove it
+      if (indicators.get(i).name.equals(r.name)) {
+        indicators.remove(i);
+        drawTreemap(year, dimension, r);
+        break;
+      }
+    }
+  }
+}
+
 
 
 
@@ -218,11 +272,14 @@ void drawMap() {
   map.rect(5, 5, map.width+200, map.height+5);
   map.beginDraw();
   map.stroke(0);
-  map.background(240);
+  map.background(255);
   for (Region r : regions) {
     map.pushMatrix();
+    map.fill(0);
+    map.textFont(decimal);
+    map.text(r.name, r.x, r.y);
     map.fill(255-r.R, 255-r.G, 255);
-    map.translate(r.x, r.y);
+    map.translate(r.x, r.y);    
     r.shape.draw(map);
     RPoint p = new RPoint(mouseX - mapX - r.x, mouseY - mapY - r.y);
     if (r.shape.contains(p)) {
@@ -263,10 +320,10 @@ void mouseClicked() {
   }
 }
 
-/////////////////////////////////////////////////////////////TREEMAPS///////////////////////////////////////////////////////
+
 void drawTreemap(int year, String dimension, Region region) {
   PGraphics t;
-  t = createGraphics(300, 300);
+  t = createGraphics(300, 312);
   Indicator indi = new Indicator(t, tX, tY, region.name);
   
   
@@ -303,24 +360,25 @@ void drawRect(Indicator t, int x1, int y1, int w1, int h1, int value) {
   t.treemap.beginDraw();
   t.treemap.colorMode(HSB, 1.0);
   t.treemap.stroke(1);
-  float hStart = randomHue - 0.1;
-  float hEnd = randomHue + 0.1;
-  float h = random(hStart, hEnd);
-  float s = random(0.07, 0.35);
-  float b = random(0.7, 0.95);
-  t.treemap.fill(h, s, b);
+  
+  t.treemap.fill(t.colors[t.cont]);
   t.treemap.rect(x1, y1, w1, h1); //we draw a rectangle    
   t.treemap.fill(1);
   
   t.treemap.textFont(decimal);
   t.treemap.text(t.indicators[t.cont] + " (" + str(value) + ")", x1+2, y1+1,w1-w1/8,h1-h1/8);
   t.cont = t.cont + 1;
+  
+  if (t.cont == 4) {
+    t.treemap.fill(0);
+    t.treemap.text(t.name, 2, 310);
+  }
   t.treemap.endDraw();
 }
 
 int getPerfectSplitNumber(int[] numbers, int blockW, int blockH) {
-  int valueA = numbers[0];//our biggest value
-  int valueB = 0;//value B will correspond to the sum of all remmaining objects in array
+  int valueA = numbers[0];
+  int valueB = 0;
   for ( int i=1; i < numbers.length; i++ ) {
     valueB += numbers[i];
   }
@@ -340,10 +398,9 @@ int getPerfectSplitNumber(int[] numbers, int blockW, int blockH) {
   float ratioHW = float(heightA) / float(widthA);
   float diff;
 
-  if (widthA >= heightA) {// Larger rect //ratio = largeur sur hauteur,
-    //we should spit vertically...
+  if (widthA >= heightA) {
     diff = 1 - ratioHW ;
-  } else {//taller rectangle ratio
+  } else {
     diff = 1- ratioWH;
   }
 
